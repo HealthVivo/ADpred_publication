@@ -1,0 +1,240 @@
+#!/bin/bash
+
+model_single_aa_composition = joblib.load(analysis_home+'/models/model_single_aa_composition.joblib')
+model_dipeptides = joblib.load(analysis_home+'/models/model_dipeptides.joblib')
+
+
+# new performances: 
+def make_figure(results):
+
+    for i in ['auroc','acc','auprc']:
+        vals, test_vals, names = [],[], []
+        for k,v in results['balanced']['auprc'].items():
+            test_vals.append(v[0])
+            vals.append([np.mean(v[1:]), np.std(v[1:])])
+            names.append(k)
+
+            print("{}: {:<16}\ttest = {:.3f}\tdataset = {:.3f} \u00B1 {:.3f}".format(i,k,v[0], np.mean(v[1:]), np.std(v[1:]))) 
+
+    vals = np.array(vals)
+    matplotlib.style.use('seaborn-colorblind')
+    f,ax = plt.subplots(1,figsize=(10,5))    
+    ax.errorbar(vals[:,0], names, xerr=vals[:,1], fmt='o', mfc='r', mec='r', ecolor='k', lw=5, markersize=10)
+    #sns.despine(trim=True, offset=10, ax=ax)
+    plt.box(False)
+    plt.grid()
+    
+    ax.scatter(test_vals,np.arange(len(names))+0.3, marker='s', color='r', s=100)
+
+
+def acc(y1,y2):
+
+    if len(y1)!=len(y2):
+        print('error')
+        return
+    
+    y1 = y1>=0.5
+    y2 = y2>=0.5
+
+    return np.sum(y1==y2)/len(y1)
+
+
+#========================================================================================================================================
+# define method to open iupred predictions file
+def open_prediction(predictionFile):
+    tar = tarfile.open(predictionFile, "r:gz")
+    for member in tar.getmembers():
+        f = tar.extractfile(member)
+        if f is not None:
+            content = f.read().decode('ascii').split('\n')
+    return content
+
+def open_iupred(iupredFile):
+    content = open_prediction(iupredFile)
+    iupred_short={}
+    for i in range(0, len(content)-1,4):
+        try:
+            [k,v] = content[i+1:i+3]
+            iupred_short[k] = v
+        except Exception as e:
+            print(str(e))
+    return iupred_short
+
+
+def make_ohe(seq, aa):
+    '''
+        one hot encode a tensor
+        INPUT: sequence and list of all possible values in the sequence(aa, ss, etc..)
+        OUTPUT: ohe tensor
+    '''
+    # initialize results tensor
+    res = np.zeros(shape = (len(seq), len(aa)))
+    # get positions (that correspond to aa) to assign 1 along the 30mer
+    for position, residue in enumerate(seq):
+        res[position][aa.index(residue)]=1
+    return res
+
+# all models
+def make_model(model_features, weights_filename):
+    if model_features == 'model_seq': input_shape =  (30, 20, 1)
+    elif model_features == 'model_seq_iupred': input_shape = (30, 22, 1)
+    elif model_features == 'model_seq_iupred_ss': input_shape = (30, 25, 1)
+        
+    K.clear_session()
+    inputs = Input(shape=input_shape)
+    x = Conv2D(input_shape[0]-1, (4,input_shape[1]), activation=softplus)(inputs) # initializers are default in all layers.
+    x = MaxPooling2D((3, 1), strides=(1, 1), padding='same')(x)
+    x = Flatten()(x)
+    x = Dense(300, activation=softplus)(x)
+    x = Dropout(0.3)(x)
+    x = Dense(30, activation=softplus, kernel_regularizer=regularizers.l2(0.01))(x)
+    output = Dense(1, activation='sigmoid')(x)
+    model = Model(inputs=inputs, outputs=output)
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=[auc])
+    
+    with open(weights_filename, 'rb') as f:
+        w = pickle.load(f)
+    model.set_weights(w)
+    
+    return model
+
+##########################################################################
+# If requested to load data from file and avoid calculating from scratch #
+##########################################################################
+
+if '--from-pickle' in sys.argv:
+    with open(analysis_home+'/results/figure4C.pkl', 'rb') as f:
+        results = pickle.load(f)
+        make_figure(results)
+
+else:
+    # Collect iupred results
+    iupred_short_file = 'data/30mers_ALL.IUPred_short_disorder.fasta.tar.gz'
+    iupred_short = open_iupred(iupred_short_file)
+    iupred_short_arr_pos = np.array([iupred_short[i] for i in positives[:,0]])
+    iupred_short_arr_neg = np.array([iupred_short[i] for i in negatives[:,0]])
+    ohe_p_disS = np.array([make_ohe(i,['-','D']) for i in iupred_short_arr_pos])
+    ohe_n_disS = np.array([make_ohe(i,['-','D']) for i in iupred_short_arr_neg])
+
+    #========================================================================================================================================
+
+    #####################################################################
+    # complete set for SD eccept for init 0 where held out test is used #
+    #####################################################################
+
+    # first have a pool of seq, ss, iupred to merge upon need.
+    seqp = np.array([make_ohe(i,aa) for i in positives[:,0]]).astype(np.int8) 
+    seqn = np.array([make_ohe(i,aa) for i in negatives[:,0]]).astype(np.int8)
+    ssp = np.array([make_ohe(i,ss) for i in positives[:,1]]).astype(np.int8)
+    ssn = np.array([make_ohe(i,ss) for i in negatives[:,1]]).astype(np.int8)
+    iupredp = ohe_p_disS.astype(np.int8)
+    iupredn = ohe_n_disS.astype(np.int8)
+
+    #rangep, rangen = np.arange(len(positives)), np.arange(len(negatives))
+    #_10 = len(positives) // 10
+    rangep, rangen = np.hstack([ptest,pvalid]), np.hstack([ntest,nvalid])
+    _10 = ptest.shape[0] // 2
+
+    # define the dictionaries to store the data
+    def define_dict():
+        d = {
+            'single':[],
+            'dipept':[],
+            'ADPred':[],
+            'NNseq':[],
+            'NNseq_iupred':[],
+            'NNseq_iupred_ss':[]
+        }
+        return d
+
+    results = {
+        'balanced':{'auroc':define_dict(), 'auprc':define_dict(), 'acc':define_dict()},
+        'N2': {'auroc':define_dict(), 'auprc':define_dict(), 'acc':define_dict()},
+        'N10':{'auroc':define_dict(), 'auprc':define_dict(), 'acc':define_dict()}
+    }
+
+    for init in range(21):
+                
+        idxp = np.random.permutation(rangep)
+        idxn = np.random.permutation(rangen)
+
+        for (i,j) in zip([1,2,10],['balanced', 'N2', 'N10']):
+        
+            if init==0: # collect held out test set
+        
+                idxp10 = ptest[:]
+                idxn10 = ntest[:]
+
+            else:
+                idxp10 = idxp[:_10]
+                idxn10 = idxn[:_10*i]
+
+
+            xp = positives[idxp10]
+            xn = negatives[idxn10]
+
+            x_test = np.vstack([xp, xn])
+            y_test = np.hstack([np.ones(len(idxp10)), np.zeros(len(idxn10))])
+
+            # single
+            Xtest_aa = get_aa_frequencies(x_test[:,0])
+            y_hat = model_single_aa_composition.predict_proba(np.hstack(Xtest_aa).T)[:,1]
+            results[j]['auroc']['single'].append(roc_auc_score(y_test, y_hat))
+            results[j]['auprc']['single'].append(average_precision_score(y_test, y_hat))                        
+            results[j]['acc']['single'].append(acc(y_test, y_hat))
+
+            #dipept
+            Xtest_dip = get_dipeptide_frequencies(x_test[:,0]) 
+            model_dipeptides = joblib.load(analysis_home+'/models/model_dipeptides.joblib')
+            y_hat = model_dipeptides.predict_proba(np.vstack(Xtest_dip))[:,1]
+            results[j]['auroc']['dipept'].append(roc_auc_score(y_test, y_hat))
+            results[j]['auprc']['dipept'].append(average_precision_score(y_test, y_hat))
+            results[j]['acc']['dipept'].append(acc(y_test, y_hat))
+
+            # ADPred learning
+            ADPred = make_ADPred()
+            a = np.vstack([seqp.T, ssp.T]).T[idxp10]
+            b = np.vstack([seqn.T, ssn.T]).T[idxn10]
+            Xtest_ohe = np.vstack([a, b])
+            Xtest_ohe = Xtest_ohe.reshape(np.append(Xtest_ohe.shape,1)).astype(np.int8)
+            y_hat = ADPred.predict(Xtest_ohe)
+            results[j]['auroc']['ADPred'].append(roc_auc_score(y_test, y_hat))
+            results[j]['auprc']['ADPred'].append(average_precision_score(y_test, y_hat))
+            results[j]['acc']['ADPred'].append(acc(y_test, y_hat))
+
+            # NN sequence only
+            Xtest_ohe = np.vstack([seqp[idxp10], seqn[idxn10]])
+            Xtest_ohe = Xtest_ohe.reshape(np.append(Xtest_ohe.shape,1)).astype(np.int8)
+            NNseq = make_model('model_seq', analysis_home+'/models/new_train_fix_split_and_redefine_positives/balanced-testweigths.pkl')
+            y_hat = NNseq.predict(Xtest_ohe)
+            results[j]['auroc']['NNseq'].append(roc_auc_score(y_test, y_hat))
+            results[j]['auprc']['NNseq'].append(average_precision_score(y_test, y_hat))
+            results[j]['acc']['NNseq'].append(acc(y_test, y_hat))
+
+            # NN sequence + iupred
+            a = np.vstack([seqp.T, iupredp.T]).T[idxp10]
+            b = np.vstack([seqn.T, iupredn.T]).T[idxn10]
+            Xtest_ohe = np.vstack([a,b])
+            Xtest_ohe = Xtest_ohe.reshape(np.append(Xtest_ohe.shape,1)).astype(np.int8)
+            NNseq = make_model('model_seq_iupred', analysis_home+'/models/new_train_fix_split_and_redefine_positives/iupred_short_--balanced-testweigths.pkl')
+            y_hat = NNseq.predict(Xtest_ohe)
+            results[j]['auroc']['NNseq_iupred'].append(roc_auc_score(y_test, y_hat))
+            results[j]['auprc']['NNseq_iupred'].append(average_precision_score(y_test, y_hat))
+            results[j]['acc']['NNseq_iupred'].append(acc(y_test, y_hat))
+
+
+            # NN sequence + iupred + ss
+            a = np.vstack([seqp.T, iupredp.T, ssp.T]).T[idxp10]
+            b = np.vstack([seqn.T, iupredn.T, ssn.T]).T[idxn10]
+            Xtest_ohe = np.vstack([a,b])
+            Xtest_ohe = Xtest_ohe.reshape(np.append(Xtest_ohe.shape,1)).astype(np.int8)
+            NNseq = make_model('model_seq_iupred_ss', analysis_home+'/models/new_train_fix_split_and_redefine_positives/ss_iupred_short_--balanced-testweigths.pkl')
+            y_hat = NNseq.predict(Xtest_ohe)
+            results[j]['auroc']['NNseq_iupred_ss'].append(roc_auc_score(y_test, y_hat))
+            results[j]['auprc']['NNseq_iupred_ss'].append(average_precision_score(y_test, y_hat))
+            results[j]['acc']['NNseq_iupred_ss'].append(acc(y_test, y_hat))
+
+    make_figure(results)
+
+    # save pickle with results
+    with open(analysis_home+'/results/figure4C.pkl','wb') as f: pickle.dump(results, f)

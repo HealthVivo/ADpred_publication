@@ -1,0 +1,142 @@
+from scripts.initialize_notebook import *
+from libraries.utils import aa
+from matplotlib import transforms
+import matplotlib.patheffects
+from matplotlib.font_manager import FontProperties
+
+
+def read_ss(filename):
+    f = open(filename)
+    for i in f:
+        if i[0]=='#' or len(i)<3: continue
+        ss.append(i.strip().replace('  ',' ').replace('C','-').split(' ')[2])
+    f.close()
+    return ''.join(ss)
+
+def make_ohe(SEQ,SS):
+    ohe = np.zeros(shape=(30,23))
+    for n,i in enumerate(SEQ):
+        ohe[n, aa.index(i)]=1    
+    for n,i in enumerate(SS):
+        ohe[n, ss.index(i)+20]=1
+
+    return ohe
+
+def ohe_2_aa_binary(ohe_data):
+    seq = []
+    struc = []
+    
+    for n,i in enumerate(ohe_data):
+        seq.append(aa[int(np.where(i[:20]!=0)[0])])
+        struc.append(ss[int(np.where(i[20:]!=0)[0])])
+        
+    return ''.join(seq), ''.join(struc)
+
+def ohe_2_aa_analog(ohe_data):
+    global ss
+    seq = ohe_data[:,:20].reshape(30,20)
+    SS =  ohe_data[:,20:].reshape(30,3)
+
+    seq_list = []
+    for i in seq:
+        seq_list.append([(i,j) for i,j in zip(aa,i)])
+        
+    ss_list = []
+    for i in SS:
+        ss_list.append([(i,j) for i,j in zip(ss,i)])
+        
+    return seq_list, ss_list
+
+def ohe_2_aa_analog(ohe_data):
+    global ss
+    seq = ohe_data[:,:20].reshape(30,20)
+    SS =  ohe_data[:,20:].reshape(30,3)
+
+    seq_list = []
+    for i in seq:
+        seq_list.append([(i,j) for i,j in zip(aa,i)])
+        
+    ss_list = []
+    for i in SS:
+        ss_list.append([(i,j) for i,j in zip(ss,i)])
+        
+    return seq_list, ss_list
+
+
+
+# define color schemes
+aa_1 = {i:'blue' for i in ['R','H','K']}
+aa_2 = {i:'red' for i in ['D','E']}
+aa_3 = {i:'cyan' for i in ['S','T','N','Q']}
+aa_4 = {i:'green' for i in ['A','I','L','M','F','W','Y','V']}
+aa_5 = {i:'yellow' for i in ['C','G','P']}
+
+COLOR_SCHEME_AA = {**aa_1,**aa_2,**aa_3,**aa_4,**aa_5}
+
+COLOR_SCHEME_SS = {'E': 'orange',
+                   'H': 'blue',
+                   '-': 'red'}
+
+def logo(attributions_gradin_sample, score, ax):
+    a = attributions_gradin_sample.reshape(30,23).T
+    b = a.sum(axis=0)
+    A = np.abs(b)
+    scale = (A-np.min(A)) / (np.max(A) - np.min(A))
+    sequence=ohe_2_aa_binary(attributions_gradin_sample)[0]
+    colors = [COLOR_SCHEME_AA[i] for i in sequence]
+    
+    ax.bar(np.arange(30), a.sum(axis=0), alpha=0.2, color=colors)
+
+    for n,(s,h) in enumerate(zip(sequence, b)):
+        y = [0 if h>0 else h][0]
+        ax.text(n-0.5,y, s, fontsize=scale[n]*100, color=colors[n], fontweight='bold', fontname='Andale Mono')
+        ax.text(n,np.min(b), s, fontsize=15, color=colors[n], fontweight='bold', fontname='Andale Mono')
+
+    ax.set_title(score)
+    plt.tight_layout()
+
+
+class Scale(matplotlib.patheffects.RendererBase):
+    def __init__(self, sx, sy=None):
+        self._sx = sx
+        self._sy = sy
+
+    def draw_path(self, renderer, gc, tpath, affine, rgbFace):
+        affine = affine.identity().scale(self._sx, self._sy)+affine
+        renderer.draw_path(gc, tpath, affine, rgbFace)
+
+
+def draw_logo2(all_scores, filename, fontfamily='Arial', size=80, COLOR_SCHEME=COLOR_SCHEME_AA):
+    if fontfamily == 'xkcd':
+        plt.xkcd()
+    else:
+        matplotlib.rcParams['font.family'] = fontfamily
+
+    fig, ax = plt.subplots(figsize=(len(all_scores), 2.5))
+
+    font = FontProperties()
+    font.set_size(size)
+    font.set_weight('bold')
+    
+    #font.set_family(fontfamily)
+
+    ax.set_xticks(range(1,len(all_scores)+1))    
+    ax.set_yticks(range(0,6))
+    ax.set_xticklabels(range(1,len(all_scores)+1), rotation=90)
+    ax.set_yticklabels(np.arange(-3,3,1))    
+    sns.despine(ax=ax, trim=True)
+    
+    trans_offset = transforms.offset_copy(ax.transData,fig=fig, x=1, y=0,units='dots')
+   
+    for index, scores in enumerate(all_scores):
+        yshift = 0
+        for base, score in scores:
+            txt = ax.text(index+1, 3, base,transform=trans_offset,fontsize=80, color=COLOR_SCHEME[base],ha='center',fontproperties=font,)
+            txt.set_path_effects([Scale(1.0, score)])
+            fig.canvas.draw()
+            window_ext = txt.get_window_extent(txt._renderer)
+            yshift = window_ext.height*score
+            trans_offset = transforms.offset_copy(txt._transform, fig=fig, y=yshift, units='points')
+        trans_offset = transforms.offset_copy(ax.transData, fig=fig, x=1, y=0, units='points')    
+    plt.axis('off')
+    plt.savefig(filename)

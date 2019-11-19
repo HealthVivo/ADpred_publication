@@ -1,0 +1,288 @@
+#!/bin/bash
+
+model_single_aa_composition = joblib.load(analysis_home+'/models/model_single_aa_composition.joblib')
+model_dipeptides = joblib.load(analysis_home+'/models/model_dipeptides.joblib')
+
+
+# new performances: 
+def make_figure(results):
+
+    for i in ['auroc','acc','auprc']:
+        vals, test_vals, names = [],[], []
+        for k,v in results['balanced']['auprc'].items():
+            test_vals.append(v[0])
+            vals.append([np.mean(v[1:]), np.std(v[1:])])
+            names.append(k)
+
+            print("{}: {:<16}\ttest = {:.3f}\tdataset = {:.3f} \u00B1 {:.3f}".format(i,k,v[0], np.mean(v[1:]), np.std(v[1:]))) 
+
+    vals = np.array(vals)
+    matplotlib.style.use('seaborn-colorblind')
+    f,ax = plt.subplots(1,figsize=(10,5))    
+    ax.errorbar(vals[:,0], names, xerr=vals[:,1], fmt='o', mfc='r', mec='r', ecolor='k', lw=5, markersize=10)
+    #sns.despine(trim=True, offset=10, ax=ax)
+    plt.box(False)
+    plt.grid()
+    
+    ax.scatter(test_vals,np.arange(len(names))+0.3, marker='s', color='r', s=100)
+
+
+def acc(y1,y2):
+
+    if len(y1)!=len(y2):
+        print('error')
+        return
+    
+    y1,y2 = y1>=0.5, y2>=0.5
+
+    return np.sum(y1==y2)/len(y1)
+
+
+def scramble_indices(X,y):
+    idx = np.random.permutation(np.arange(len(X)))
+    return X[idx], y[idx]
+
+#========================================================================================================================================
+# define method to open iupred predictions file
+def open_prediction(predictionFile):
+    tar = tarfile.open(predictionFile, "r:gz")
+    for member in tar.getmembers():
+        f = tar.extractfile(member)
+        if f is not None:
+            content = f.read().decode('ascii').split('\n')
+    return content
+
+def open_iupred(iupredFile):
+    content = open_prediction(iupredFile)
+    iupred_short={}
+    for i in range(0, len(content)-1,4):
+        try:
+            [k,v] = content[i+1:i+3]
+            iupred_short[k] = v
+        except Exception as e:
+            print(str(e))
+    return iupred_short
+
+
+def make_ohe(seq, aa):
+    '''
+        one hot encode a tensor
+        INPUT: sequence and list of all possible values in the sequence(aa, ss, etc..)
+        OUTPUT: ohe tensor
+    '''
+    # initialize results tensor
+    res = np.zeros(shape = (len(seq), len(aa)))
+    # get positions (that correspond to aa) to assign 1 along the 30mer
+    for position, residue in enumerate(seq):
+        res[position][aa.index(residue)]=1
+    return res
+
+# all models
+def make_model(model_features, weights_filename=None):
+
+    if model_features == 'model_seq': input_shape =  (30, 20, 1)
+    elif model_features == 'model_seq_iupred': input_shape = (30, 22, 1)
+    elif model_features == 'model_seq_iupred_ss': input_shape = (30, 25, 1)
+        
+    K.clear_session()
+    inputs = Input(shape=input_shape)
+    x = Conv2D(input_shape[0]-1, (4,input_shape[1]), activation=softplus)(inputs) # initializers are default in all layers.
+    x = MaxPooling2D((3, 1), strides=(1, 1), padding='same')(x)
+    x = Flatten()(x)
+    x = Dense(300, activation=softplus)(x)
+    x = Dropout(0.3)(x)
+    x = Dense(30, activation=softplus, kernel_regularizer=regularizers.l2(0.01))(x)
+    output = Dense(1, activation='sigmoid')(x)
+    model = Model(inputs=inputs, outputs=output)
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=[auc])
+    
+    if isinstance(weights_filename, str):
+        with open(weights_filename, 'rb') as f:
+            w = pickle.load(f)
+        model.set_weights(w)
+    
+    return model
+
+
+def train_model(model, n_train, p_train, batch_size=250):
+        
+    #ptrain, p_filename = store_data_numpy(p_train)   
+    #ntrain, n_filename = store_data_numpy(n_train)
+
+    __10 = len(p_train)//10
+
+    pvalid = ptrain[:__10]
+    ptrain = ptrain[__10:]
+    nvalid = ntrain[:__10]
+    ntrain = ntrain[__10:]
+
+    X_valid = np.vstack([pvalid, nvalid])
+    y_valid = np.hstack([np.ones(__10), np.zeros(__10)])
+    X_valid, y_valid = scramble_indices(X_valid, y_valid)
+
+    model.fit_generator(epoch_generator(ntrain, ptrain, batch_size=batch_size),
+                            validation_data=(X_valid.reshape(np.insert(X_valid.shape,3,1)), y_valid),
+                            steps_per_epoch=int(len(ptrain)/BS),
+                            epochs=100,
+                            callbacks=[EarlyStopping(patience=3)],
+                            verbose=0)    
+    return model
+
+
+##########################################################################
+# If requested to load data from file and avoid calculating from scratch #
+##########################################################################
+
+if '--from-pickle' in sys.argv:
+    with open(analysis_home+'/results/figure4C.pkl', 'rb') as f:
+        results = pickle.load(f)
+        make_figure(results)
+
+else:
+    # Collect iupred results
+    iupred_short_file = 'data/30mers_ALL.IUPred_short_disorder.fasta.tar.gz'
+    iupred_short = open_iupred(iupred_short_file)
+    iupred_short_arr_pos = np.array([iupred_short[i] for i in positives[:,0]])
+    iupred_short_arr_neg = np.array([iupred_short[i] for i in negatives[:,0]])
+    ohe_p_disS = np.array([make_ohe(i,['-','D']) for i in iupred_short_arr_pos])
+    ohe_n_disS = np.array([make_ohe(i,['-','D']) for i in iupred_short_arr_neg])
+
+    #========================================================================================================================================
+
+    #####################################################################
+    # complete set for SD eccept for init 0 where held out test is used #
+    #####################################################################
+
+    # first have a pool of seq, ss, iupred to merge upon need.
+    seqp = np.array([make_ohe(i,aa) for i in positives[:,0]]).astype(np.int8) 
+    seqn = np.array([make_ohe(i,aa) for i in negatives[:,0]]).astype(np.int8)
+    ssp = np.array([make_ohe(i,ss) for i in positives[:,1]]).astype(np.int8)
+    ssn = np.array([make_ohe(i,ss) for i in negatives[:,1]]).astype(np.int8)
+    iupredp = ohe_p_disS.astype(np.int8)
+    iupredn = ohe_n_disS.astype(np.int8)
+
+    # define the dictionaries to store the data
+    def define_dict():
+        d = {
+            'single':[],
+            'dipept':[],
+            'ADPred':[],
+            'NNseq':[],
+            'NNseq_iupred':[],
+            'NNseq_iupred_ss':[]
+        }
+        return d
+
+    results = {
+        'balanced'  : {'auroc':define_dict(), 'auprc':define_dict(), 'acc':define_dict()},
+        'unbalanced': {'auroc':define_dict(), 'auprc':define_dict(), 'acc':define_dict()},
+    }
+
+    # define indices for balanced and for unbalanced 
+    rangep, rangen = len(positives), len(negatives)
+    _10p = rangep // 10
+    _10n = rangen // 10
+
+    
+    idxp = np.random.permutation(rangep)
+    idxn = np.random.permutation(rangen)
+
+
+    for init in range(10):
+
+        for (i,j) in zip([_10p, _10n],['balanced', 'unbalanced']):
+
+            print(' iteration: {}\ntype{}'.format(init, j)) 
+
+            # generate indices for train, test split        
+            idxp10 = idxp[_10p*init:_10p*(init+1)]
+            idxn10 = idxn[i*init:i*(init+1)]
+            xp,xn = positives[idxp10], negatives[idxn10]
+            x_test = np.vstack([xp, xn])
+            y_test = np.hstack([np.ones(len(idxp10)), np.zeros(len(idxn10))])
+            x_test, y_test = scramble_indices(x_test, y_test)
+            del xp,xn                
+
+            idxp90 = np.hstack([ idxp[0:_10p*init], idxp[_10p*(init+1):] ]) 
+            idxn90 = np.hstack([ idxn[0:i*init], idxn[i*(init+1):] ])  
+            xp,xn = positives[idxp90], negatives[idxn90]
+            x_train = np.vstack([xp,xn])
+            y_train = np.hstack([np.ones(len(idxp90)), np.zeros(len(idxn90))])
+            x_train, y_train = scramble_indices(x_train, y_train)
+            del xp,xn
+
+            # train all models on training set and test them on test set. Both balanced and Unbalanced included            
+
+            # single
+            Xtest  = get_aa_frequencies(x_test[:,0]);  Xtest  = np.hstack(Xtest.T).T
+            Xtrain = get_aa_frequencies(x_train[:,0]); Xtrain = np.hstack(Xtrain.T).T
+            model_single_aa_composition = LogisticRegressionCV(Cs = np.linspace(1e-4, 1e4, 40), cv=5, scoring = make_scorer(roc_auc_score)).fit(Xtrain,y_train)
+            y_hat = model_single_aa_composition.predict_proba(Xtest)[:,1]
+            results[j]['auroc']['single'].append(roc_auc_score(y_test, y_hat))
+            results[j]['auprc']['single'].append(average_precision_score(y_test, y_hat))                        
+            results[j]['acc']['single'].append(acc(y_test, y_hat))
+            del Xtest, Xtrain, model_single_aa_composition, y_hat
+            
+            #dipept
+            Xtest  = get_dipeptide_frequencies(x_test[:,0]); Xtest  = np.vstack(Xtest)
+            Xtrain = get_dipeptide_frequencies(x_train[:,0]); Xtrain = np.vstack(Xtrain)
+            model_dipeptides = LogisticRegressionCV(Cs = np.linspace(1e-4, 1e4, 40), cv=5, scoring = make_scorer(roc_auc_score), max_iter=700).fit(Xtrain,y_train)
+            y_hat = model_dipeptides.predict_proba(np.vstack(Xtest))[:,1]
+            results[j]['auroc']['dipept'].append(roc_auc_score(y_test, y_hat))
+            results[j]['auprc']['dipept'].append(average_precision_score(y_test, y_hat))
+            results[j]['acc']['dipept'].append(acc(y_test, y_hat))
+            del Xtest, Xtrain, model_dipeptides, y_hat
+
+            # NN sequence only
+            Xtest  = np.vstack([seqp[idxp10], seqn[idxn10]])
+            Xtest  = Xtest.reshape(np.append(Xtest.shape,1)).astype(np.int8)
+            NN_seq = make_model('model_seq') #, analysis_home+'/models/new_train_fix_split_and_redefine_positives/balanced-testweigths.pkl')
+            NN_seq = train_model(NN_seq, seqn[idx90], seqp[idx90])       
+            y_hat = NN_seq.predict(Xtest)
+            results[j]['auroc']['NNseq'].append(roc_auc_score(y_test, y_hat))
+            results[j]['auprc']['NNseq'].append(average_precision_score(y_test, y_hat))
+            results[j]['acc']['NNseq'].append(acc(y_test, y_hat))
+            del Xtrain, Xtest, NN_seq, y_hat  
+
+            # NN sequence + ss 
+            a = np.vstack([seqp.T, ssp.T]).T
+            b = np.vstack([seqn.T, ssn.T]).T
+            Xtest  = np.vstack([a[idxp10], b[idxn10]])
+            NN_seq_ss = make_model('model_seq_ss') #ADPred = make_ADPred()
+            NN_seq_ss = train_model(model, b[idxn90], a[idxp90])
+            Xtest = Xtest.reshape(np.append(Xtest.shape,1)).astype(np.int8)
+            y_hat = NN_seq_ss.predict(Xtest)
+            results[j]['auroc']['ADPred'].append(roc_auc_score(y_test, y_hat))
+            results[j]['auprc']['ADPred'].append(average_precision_score(y_test, y_hat))
+            results[j]['acc']['ADPred'].append(acc(y_test, y_hat))
+            del a,b, Xtest, NN_seq_ss
+
+            # NN sequence + iupred
+            a = np.vstack([seqp.T, iupredp.T]).T
+            b = np.vstack([seqn.T, iupredn.T]).T
+            Xtest = np.vstack([a[idxp10],b[idxn10]])
+            Xtest = Xtest.reshape(np.append(Xtest.shape,1)).astype(np.int8)
+            NN_seq_iupred = make_model('model_seq_iupred') #, analysis_home+'/models/new_train_fix_split_and_redefine_positives/iupred_short_--balanced-testweigths.pkl')
+            NN_seq_iupred = train_model(NN_seq_iupred, b[idxn90], a[idxp90])
+            y_hat = NN_seq_iupred.predict(Xtest)
+            results[j]['auroc']['NNseq_iupred'].append(roc_auc_score(y_test, y_hat))
+            results[j]['auprc']['NNseq_iupred'].append(average_precision_score(y_test, y_hat))
+            results[j]['acc']['NNseq_iupred'].append(acc(y_test, y_hat))
+
+
+            # NN sequence + iupred + ss
+            a = np.vstack([seqp.T, iupredp.T, ssp.T]).T
+            b = np.vstack([seqn.T, iupredn.T, ssn.T]).T
+            Xtest = np.vstack([a[idxp10],b[idxn10]])
+            Xtest = Xtest.reshape(np.append(Xtest.shape,1)).astype(np.int8)
+            NN_seq_iupred_ss = make_model('model_seq_iupred_ss') #, analysis_home+'/models/new_train_fix_split_and_redefine_positives/ss_iupred_short_--balanced-testweigths.pkl')
+            NN_seq_iupred_ss = train_model(NN_seq_iupred_ss, b[idxn90], a[idxp90])
+            y_hat = NN_seq_iupred_ss.predict(Xtest)
+            results[j]['auroc']['NNseq_iupred_ss'].append(roc_auc_score(y_test, y_hat))
+            results[j]['auprc']['NNseq_iupred_ss'].append(average_precision_score(y_test, y_hat))
+            results[j]['acc']['NNseq_iupred_ss'].append(acc(y_test, y_hat))
+
+    make_figure(results)
+
+    # save pickle with results
+    with open(analysis_home+'/results/figure4C.pkl','wb') as f: pickle.dump(results, f)
