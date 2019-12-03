@@ -1,4 +1,4 @@
-# Bioinformatic analysis for the manuscript Erijman et al., 2019
+## Bioinformatic analysis for the manuscript Erijman et al., 2019
 
 ## Installation. 
 1. [install git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (unless you already have it): 
@@ -23,10 +23,10 @@
 _Alternatively_, You could download the data outside the notebook `wget https://www.dropbox.com/s/vooe7mb62rnswp5/data2.tar.gz?dl=0` and start the notebook from cell 2.  
 - Figures are created running the scripts from the notebook.
    Many of the scripts are very slow. The computation has been processed in a high performance cluster at the Fred Hutchinson Cancer Center with GPUs where needed. 
-   
+---  
 
 
-## Preprocessig consisted in:
+### Preprocessig consisted in:
 1. Constructing the complete insert from the reads with `FLASH_wrapper.py` which wraps [FLASH tool](https://ccb.jhu.edu/software/FLASH/)
 2. Translating the nucletide sequences into protein sequences with `translate.py`	
 3. Clustering similar sequences to reduce noise/variation from sequencing and dna handling errors with `run_usearch.sh`	which wraps [usearch tool](usearch) and `clusters.py`	
