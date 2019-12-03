@@ -10,3 +10,4 @@ jupyterlab
 keras
 tensorflow
 seaborn
+deepexplain=0.3
