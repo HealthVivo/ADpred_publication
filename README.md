@@ -2,7 +2,7 @@
 
 ## Installation   
 1. [`Install git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (unless you already have it): 
-2. Clone the repository in your computer (`git clone git@github.com:aerijman/ADpred_publication.git`) 
+2. Clone the repository in your computer (`git clone git@github.com:aerijman/ADpred_publication.git`) + `cd ADpred_publication`
 3. Build dependencies.   
 
    __With conda:__  
@@ -16,7 +16,6 @@
      * [`install pip`](https://pip.pypa.io/en/stable/installing/). 
      * run `pip install -r requirements.txt` (You should have `python>=3.6.5`).       
        
-4. `cd ADpred_publication`
 5. run the notebook: `jupyter notebook analysis.ipynb` (I prefer jupyter lab)
 ---  
 
