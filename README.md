@@ -15,7 +15,8 @@
    __If you work with pip:__   
      * You should have `python>=3.6.5` otherwise, install it.   
      * run `pip install -r requirements.txt`.      
-4. run the notebook: `jupyter notebook analysis.ipynb` (I prefer jupyter lab)
+4. `cd ADpred_publication`
+5. run the notebook: `jupyter notebook analysis.ipynb` (I prefer jupyter lab)
 ---  
 
 ## Analysis
@@ -31,3 +32,9 @@ _Alternatively_, You could download the data outside the notebook `wget https://
 2. Translating the nucletide sequences into protein sequences with `translate.py`	
 3. Clustering similar sequences to reduce noise/variation from sequencing and dna handling errors with `run_usearch.sh`	which wraps [usearch tool](usearch) and `clusters.py`	
 4. Secondary structure and disorder predictions were automatized with external_software.sh and use [psipred](http://bioinf.cs.ucl.ac.uk/psipred/) and [iupred](https://iupred2a.elte.hu)
+
+
+
+ToDo LiSt:
+- install deepexplain. `pip into conda` or `git clone + setup install`
+- remove second cell with df=...
