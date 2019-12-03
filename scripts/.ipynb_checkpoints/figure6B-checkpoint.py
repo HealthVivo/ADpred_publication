@@ -3,6 +3,8 @@ from matplotlib import transforms
 import matplotlib.patheffects
 from matplotlib.font_manager import FontProperties
 
+
+
 class Scale(matplotlib.patheffects.RendererBase):
     def __init__(self, sx, sy=None):
         self._sx = sx
@@ -11,6 +13,7 @@ class Scale(matplotlib.patheffects.RendererBase):
     def draw_path(self, renderer, gc, tpath, affine, rgbFace):
         affine = affine.identity().scale(self._sx, self._sy)+affine
         renderer.draw_path(gc, tpath, affine, rgbFace)
+
 
 def ohe_2_aa_analog(ohe_data):
     global ss
@@ -63,6 +66,7 @@ def draw_logo2(all_scores, filename, fontfamily='Arial', size=80, COLOR_SCHEME=C
     
     trans_offset = transforms.offset_copy(ax.transData,fig=fig, x=1, y=0,units='dots')
    
+
     for index, scores in enumerate(all_scores):
         yshift = 0
         for base, score in scores:
@@ -72,9 +76,12 @@ def draw_logo2(all_scores, filename, fontfamily='Arial', size=80, COLOR_SCHEME=C
             window_ext = txt.get_window_extent(txt._renderer)
             yshift = window_ext.height*score
             trans_offset = transforms.offset_copy(txt._transform, fig=fig, y=yshift, units='points')
+        
         trans_offset = transforms.offset_copy(ax.transData, fig=fig, x=1, y=0, units='points')    
+
     plt.axis('off')
     plt.savefig(filename)
+    return fig
 
 
 def make_figure(name, name_seq, name_ss, min_range, max_range):
@@ -90,17 +97,19 @@ def make_figure(name, name_seq, name_ss, min_range, max_range):
         xs = ohe_name.reshape(1,30,23,1)
         ys = np.array([1]).reshape(1,1)
 
-        #attributions_gi = de.explain('grad*input', target_tensor, input_tensor, xs, ys=ys)
-        #attributions_sv = de.explain('shapley_sampling', target_tensor, input_tensor, xs, ys=ys)
-        attributions_dl = de.explain('deeplift', target_tensor, input_tensor, xs, ys=ys)
-        #attributions_s  = de.explain('intgrad', target_tensor, input_tensor, xs, ys=ys)
+        #attributions_dl = de.explain('grad*input', target_tensor, input_tensor, xs, ys=ys)
+        #attributions_dl = de.explain('shapley_sampling', target_tensor, input_tensor, xs, ys=ys)
+        #attributions_dl = de.explain('deeplift', target_tensor, input_tensor, xs, ys=ys)
+        attributions_dl  = de.explain('intgrad', target_tensor, input_tensor, xs, ys=ys)
 
 
     #for name, j in zip(['_grad_int_','_shapley_vals_','_saliency_'],[attributions_gi, attributions_sv,attributions_s]):
     for i in range(len(attributions_dl)):
         ALL_SCORES1, aSS1 = ohe_2_aa_analog(attributions_dl[i])
-        draw_logo2(ALL_SCORES1, name+'_AA.png', 'Verdana', COLOR_SCHEME=COLOR_SCHEME_AA)
+        fig = draw_logo2(ALL_SCORES1, name+'_AA.png', 'Verdana', COLOR_SCHEME=COLOR_SCHEME_AA)
         #draw_logo2(aSS1, name+'gcn4_SS.png', 'Verdana', COLOR_SCHEME=COLOR_SCHEME_SS)
+    return fig
+
 
 
 # draw Gcn4        
@@ -109,6 +118,8 @@ gcn4_seq = read_fasta(analysis_home + '/data/'+ name + '.fasta')
 gcn4_ss = read_horiz(analysis_home + '/data/'+ name + '.horiz')
 min_range = 107
 max_range = 137
+
+
 make_figure('gcn4', gcn4_seq, gcn4_ss, min_range, max_range)
 
 

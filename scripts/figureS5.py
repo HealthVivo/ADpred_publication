@@ -79,6 +79,17 @@ def draw_logo2(all_scores, filename, fontfamily='Arial', size=80, COLOR_SCHEME=C
     plt.close()
 
 
+def rescale_scores(ALL_SCORES1, Amplif=4):
+    a2 = []
+    for i in ALL_SCORES1:
+        tmp=[]
+        for j in i:
+            tmp.append((j[0],j[1]*Amplif))
+        a2.append(tmp)
+    return a2
+
+    
+
 df = get_enrichment_scores_table()
 df['score'] = np.sum(df.iloc[:,1:]*ARG3_FACS_RFU, axis=1) / (df.iloc[:,0] + 1)
 
@@ -107,6 +118,7 @@ with DeepExplain(session=K.get_session()) as de:
     attributions_gradin = de.explain('grad*input', target_tensor, input_tensor, xs, ys=ys)
     #attributions_sv     = de.explain('shapley_sampling', target_tensor, input_tensor, xs, ys=ys, samples=100)
     #attributions_dl     = de.explain('deeplift', target_tensor, input_tensor, xs, ys=ys)
+    #attributions_gradin = de.explain('intgrad', target_tensor, input_tensor, xs, ys=ys)
     
 #for i,j in zip(attributions_dl, preds2):
 #    f,ax1 = plt.subplots(1, figsize=(20,5))
@@ -114,4 +126,5 @@ with DeepExplain(session=K.get_session()) as de:
     
 for i in range(len(attributions_gradin)):
     ALL_SCORES1, aSS1 = ohe_2_aa_analog(attributions_gradin[i])
+    ALL_SCORES1 = rescale_scores(ALL_SCORES1, Amplif=4)
     draw_logo2(ALL_SCORES1, 'lala_AA.png', 'Verdana', COLOR_SCHEME=COLOR_SCHEME_AA)

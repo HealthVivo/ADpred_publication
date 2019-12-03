@@ -56,7 +56,7 @@ def test_model(model, known_regions):
         plt.yticks(np.round(np.linspace(0,1,4),2), fontsize=20)
 
         # predictions with the new model
-        tmp = np.convolve(predict_TAD(eval(name), model), np.ones(20)/20, 'same')
+        tmp = np.convolve(predict_TAD(eval(name), model), np.ones(15)/15, 'same')
         tmp = np.array([i if i>0.5 else 0 for i in tmp])
         plt.fill_between(np.arange(len(tmp)), tmp, alpha=0.3, color='b')
 

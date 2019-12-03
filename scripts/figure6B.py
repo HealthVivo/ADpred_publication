@@ -97,15 +97,15 @@ def make_figure(name, name_seq, name_ss, min_range, max_range):
         xs = ohe_name.reshape(1,30,23,1)
         ys = np.array([1]).reshape(1,1)
 
-        attributions_gi = de.explain('grad*input', target_tensor, input_tensor, xs, ys=ys)
-        #attributions_sv = de.explain('shapley_sampling', target_tensor, input_tensor, xs, ys=ys)
+        #attributions_dl = de.explain('grad*input', target_tensor, input_tensor, xs, ys=ys)
+        #attributions_dl = de.explain('shapley_sampling', target_tensor, input_tensor, xs, ys=ys)
         #attributions_dl = de.explain('deeplift', target_tensor, input_tensor, xs, ys=ys)
-        #attributions_s  = de.explain('intgrad', target_tensor, input_tensor, xs, ys=ys)
+        attributions_dl  = de.explain('intgrad', target_tensor, input_tensor, xs, ys=ys)
 
 
     #for name, j in zip(['_grad_int_','_shapley_vals_','_saliency_'],[attributions_gi, attributions_sv,attributions_s]):
-    for i in range(len(attributions_gi)):
-        ALL_SCORES1, aSS1 = ohe_2_aa_analog(attributions_gi[i])
+    for i in range(len(attributions_dl)):
+        ALL_SCORES1, aSS1 = ohe_2_aa_analog(attributions_dl[i])
         fig = draw_logo2(ALL_SCORES1, name+'_AA.png', 'Verdana', COLOR_SCHEME=COLOR_SCHEME_AA)
         #draw_logo2(aSS1, name+'gcn4_SS.png', 'Verdana', COLOR_SCHEME=COLOR_SCHEME_SS)
     return fig

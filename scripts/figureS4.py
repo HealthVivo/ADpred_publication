@@ -1,7 +1,7 @@
 from initialize_notebook import *
 
 
-#sys.path.append(analysis_home + '/libraries')
+sys.path.append(analysis_home + '/libraries')
 from null_distribution import *
 
 # load genome sequence of 180 TF from Stark's publication

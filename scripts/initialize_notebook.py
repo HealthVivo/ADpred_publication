@@ -13,7 +13,6 @@ from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.linear_model import LogisticRegressionCV
 import matplotlib.pyplot as plt
 from IPython.display import display, Markdown, clear_output
-import ipywidgets as widgets
 from scipy.stats import chi2, linregress, spearmanr
 from sklearn.metrics import precision_recall_curve, average_precision_score, log_loss, roc_auc_score, make_scorer
 import keras.backend as K
