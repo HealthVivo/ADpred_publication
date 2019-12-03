@@ -7,7 +7,7 @@
 
    __If you work with conda:__  
      * [install conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/macos.html). 
-     * In a terminal window:   
+     * In a terminal window, copy-paste:   
        * `conda create -n adpred python=3.7.4`. 
        * `conda activate adpred`. 
        * `while read requirement; do conda install --yes $requirement; done < dependencies.txt`.     
@@ -22,7 +22,7 @@
 - The first cell of the jupyter notebook downloads the data from its [Dropbox address](https://www.dropbox.com/s/vooe7mb62rnswp5/data2.tar.gz?dl=0).   
 _Alternatively_, You could download the data outside the notebook `wget https://www.dropbox.com/s/vooe7mb62rnswp5/data2.tar.gz?dl=0` and start the notebook from cell 2.  
 - Figures are created running the scripts from the notebook.
-   Many of the scripts are very slow. The computation has been processed in a high performance cluster at the Fred Hutchinson Cancer Center with GPUs where needed. 
+   Many of the scripts are very slow. The computation has been processed in a high performance cluster at the Fred Hutchinson Cancer Center with GPUs when needed. 
 ---  
 
 
