@@ -12,7 +12,8 @@
        * `conda activate adpred`. 
        * `while read requirement; do conda install --yes $requirement; done < dependencies.txt`.     
 
-   __With pip:__.  
+   __With pip:__   
+     * ['install pip'](https://pip.pypa.io/en/stable/installing/). 
      * run `pip install -r requirements.txt` (You should have `python>=3.6.5`).       
        
 4. `cd ADpred_publication`
