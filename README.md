@@ -1,6 +1,6 @@
 ## Bioinformatic analysis for the manuscript Erijman et al., 2019
 
-## Installation. 
+## Installation   
 1. [`Install git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (unless you already have it): 
 2. Clone the repository in your computer (`git clone git@github.com:aerijman/ADpred_publication.git`) 
 3. Build dependencies.   
@@ -28,7 +28,7 @@ _Alternatively_, You could download the data outside the notebook `wget https://
    Many of the scripts are very slow. The computation has been processed in a high performance cluster at the Fred Hutchinson Cancer Center with GPUs when needed. 
 ---  
 
-
+<br>
 ### Preprocessig (already done):
 Preprocessing is very time consuming and consisted of 1- pairing the two reads in fastq files; 2- filtering for reads with correct number of bases and without artifacts (e.g. internal stop codons); 3- translation into amino-acids; 4- clustering into similar sequences (some sequences differ in 1 or 2 aminoacids from their parental sequence due to errors during library-preparation and sequencing. We aleviate these sequence divergence in this step); 4- predict secondary structure and disorder from the amino-acid sequences. 
 1. Constructing the complete insert from the reads with `FLASH_wrapper.py` which wraps [FLASH tool](https://ccb.jhu.edu/software/FLASH/)
