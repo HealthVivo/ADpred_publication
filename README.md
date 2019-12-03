@@ -7,7 +7,7 @@
 
    __If you work with conda:__  
      * [install conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/macos.html). 
-     * In a terminal window:   
+     * In a terminal window, copy-paste:   
        * `conda create -n adpred python=3.7.4`. 
        * `conda activate adpred`. 
        * `while read requirement; do conda install --yes $requirement; done < dependencies.txt`.     
