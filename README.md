@@ -27,7 +27,8 @@ _Alternatively_, You could download the data outside the notebook `wget https://
 ---  
 
 
-### Preprocessig consisted in:
+### Preprocessig (already done):
+Preprocessing is very time consuming and consisted of 1- pairing the two reads in fastq files; 2- filtering for reads with correct number of bases and without artifacts (e.g. internal stop codons); 3- translation into amino-acids; 4- clustering into similar sequences (some sequences differ in 1 or 2 aminoacids from their parental sequence due to errors during library-preparation and sequencing. We aleviate these sequence divergence in this step); 4- predict secondary structure and disorder from the amino-acid sequences. 
 1. Constructing the complete insert from the reads with `FLASH_wrapper.py` which wraps [FLASH tool](https://ccb.jhu.edu/software/FLASH/)
 2. Translating the nucletide sequences into protein sequences with `translate.py`	
 3. Clustering similar sequences to reduce noise/variation from sequencing and dna handling errors with `run_usearch.sh`	which wraps [usearch tool](usearch) and `clusters.py`	
