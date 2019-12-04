@@ -4,7 +4,8 @@
    <img src="https://img.shields.io/badge/dependencies-tested-green">
 </a>
 
-## Bioinformatic analysis for the manuscript Erijman et al., 2019
+## Bioinformatic analysis for the manuscript:   
+### _"A high-throughput screen for transcription activation domains reveals their sequence characteristics and permits reliable prediction by deep learning"_
 
 ## Installation   
 1. [`Install git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (unless you already have it): 
