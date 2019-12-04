@@ -39,5 +39,3 @@ Preprocessing is very time consuming and consisted of 1- pairing the two reads i
 
 
 ToDo LiSt:
-- install deepexplain. `pip into conda` or `git clone + setup install`
-- remove second cell with df=...
