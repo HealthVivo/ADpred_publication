@@ -2,22 +2,22 @@
 
 ## Installation   
 1. [`Install git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (unless you already have it): 
-2. Clone the repository in your computer (`git clone git@github.com:aerijman/ADpred_publication.git && cd ADpred_publication`
+2. Clone the repository in your computer (__`git clone git@github.com:aerijman/ADpred_publication.git && cd ADpred_publication`__)
 3. Build dependencies.   
 
    __With conda:__  
      * [`install conda`](https://docs.conda.io/projects/conda/en/latest/user-guide/install/macos.html). 
      * In a terminal window, copy-paste:   
-       * `conda create -n adpred python=3.7.4`. 
-       * `conda activate adpred`. 
-       * `while read requirement; do conda install --yes $requirement; done < dependencies.txt`.     
+       * __`conda create -n adpred python=3.7.4`__. 
+       * __`conda activate adpred`__. 
+       * __`while read requirement; do conda install --yes $requirement; done < dependencies.txt`__.     
 
    __With pip:__   
      * [`install pip`](https://pip.pypa.io/en/stable/installing/). 
-     * run `pip install -r requirements.txt` (You should have `python>=3.6.5`).       
+     * run __`pip install -r requirements.txt`__ (You should have `python>=3.6.5`).       
        
-5. `$(which pip) install -e git+https://github.com/marcoancona/DeepExplain.git#egg=deepexplain`
-6. run the notebook: `jupyter notebook analysis.ipynb` (I prefer jupyter lab)  
+5. __`$(which pip) install -e git+https://github.com/marcoancona/DeepExplain.git#egg=deepexplain`__
+6. run the notebook: __`jupyter notebook analysis.ipynb`__ (I prefer jupyter lab)  
 ---  
 
 ## Analysis
