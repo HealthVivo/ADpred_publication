@@ -1,3 +1,9 @@
+<a href="https://github.com/marktext/marktext/releases/latest">
+   <img src="https://img.shields.io/badge/platform-Linux%20%7C%20Mac%20-green">
+   <img src="https://img.shields.io/badge/platform-Windows%20%3F-red">
+   <img src="https://img.shields.io/badge/dependencies-tested-green">
+</a>
+
 ## Bioinformatic analysis for the manuscript Erijman et al., 2019
 
 ## Installation   
