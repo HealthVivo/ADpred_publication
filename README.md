@@ -16,7 +16,7 @@
      * [`install pip`](https://pip.pypa.io/en/stable/installing/). 
      * run `pip install -r requirements.txt` (You should have `python>=3.6.5`).       
        
-5. $(which pip) install -e git+https://github.com/marcoancona/DeepExplain.git#egg=deepexplain
+5. `$(which pip) install -e git+https://github.com/marcoancona/DeepExplain.git#egg=deepexplain`
 6. run the notebook: `jupyter notebook analysis.ipynb` (I prefer jupyter lab)  
 ---  
 
