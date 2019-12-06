@@ -4,7 +4,8 @@
    <img src="https://img.shields.io/badge/dependencies-tested-green">
 </a>
 
-## Bioinformatic analysis for the manuscript Erijman et al., 2019
+## Bioinformatic analysis for the manuscript:   
+### _"A high-throughput screen for transcription activation domains reveals their sequence characteristics and permits reliable prediction by deep learning"_
 
 ## Installation   
 1. [`Install git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (unless you already have it): 
@@ -31,7 +32,7 @@
 _Alternatively_, You could download the data outside the notebook `wget https://www.dropbox.com/s/vooe7mb62rnswp5/data2.tar.gz?dl=0` and start the notebook from cell 2.    
 
 - Figures are created running the scripts from the notebook.
-   Many of the scripts are very slow. The computation has been processed in a high performance cluster at the Fred Hutchinson Cancer Center with GPUs when needed. 
+   Many of the scripts are very slow. Hence, some of the processes includeed in the notebook have been modified and executed in a high performance cluster at the Fred Hutchinson Cancer Research Center (in some cases with GPUs). All scripts adapted for HPC can be provided upon request to aerijman@fredhutch.org or aerijman@neb.com.  
 ---  
 
 <br>
