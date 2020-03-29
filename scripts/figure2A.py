@@ -88,7 +88,7 @@ if flag:
 ## plot validation set on averaged log-likelihood coefficients for the figure.
 a1,b1 = np.histogram(X_valid[y_valid==1], bins=100, density=True)
 a0,b0 = np.histogram(X_valid[y_valid==0], bins=100, density=True)
-[a0, a1] = [np.convolve(i, np.ones(10)/10, 'same') for i in [a0,a1]]
+[a0, a1] = [np.convolve(i, np.ones(10)/10, 'same') for i in [a1,a1]]
 [b0,b1] = [np.array([np.mean(i[j:j+2]) for j in range(len(i)-1)]) for i in [b0,b1]]
 
 sns.set_style('ticks')

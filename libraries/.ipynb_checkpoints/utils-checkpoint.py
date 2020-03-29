@@ -535,14 +535,14 @@ def predict_motif_statistics(predictions, cutoff):
     return length, longest[0], average_30mer, average_longest
 
 
-def get_percentiles(df, results, feature='iupred', lenCutoff=5):
-    TADs_idx = results[results.length>lenCutoff].index.dropna().intersection(df.index) 
+def get_percentiles(df, results, feature='iupred', lenCutoff=15):
+    TADs_idx = results[results.length>=lenCutoff].index.dropna().intersection(df.index) 
     pre50, tad, pos50 = [],[],[]
     for i in TADs_idx:
         start = results.loc[i,'start_position'].astype(int)
         end = start + results.loc[i,'length'].astype(int)
         END = len(df.loc[i,feature])
-
+        
         ## I noticed that there are some '' 
         #for n,j in enumerate(df.loc[i,feature]):
         #    if j=='': df.loc[i, feature][n]='0'
